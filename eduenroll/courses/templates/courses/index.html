@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EduEnroll - Home</title>
+    <link rel="stylesheet" href="{% static 'courses/style.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <img src="{% static 'courses/logo.png' %}" alt="Logo" class="logo">
+        <h1>EduEnroll</h1>
+        <nav>
+            <a href="/">Home</a> | <a href="/about/">About</a> | <a href="/register/">Register</a>
+        </nav>
+    </header>
+    <section id="welcome">
+        <h2>Welcome to EduEnroll</h2>
+        <p>Your gateway to learning!</p>
+        <img src="{% static 'courses/learning.png' %}" alt="Learning" class="banner">
+    </section>
+    <script>
+        $(document).ready(function() {
+            $('#welcome').hide().fadeIn(1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}Courses - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="courses-list">
+    <div class="container">
+        <h1>Our Courses</h1>
+        
+        <div class="courses-grid">
+            {% for course in courses %}
+            <div class="course-card">
+                <h3>{{ course.name }}</h3>
+                <p>{{ course.description }}</p>
+                <div class="course-meta">
+                    <span class="duration">{{ course.duration }}</span>
+                    <span class="price">${{ course.price }}</span>
+                </div>
+                <p class="instructor">Instructor: {{ course.instructor }}</p>
+                <a href="{% url 'register' %}" class="btn btn-primary">Register Now</a>
+            </div>
+            {% empty %}
+            <p>No courses available at the moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

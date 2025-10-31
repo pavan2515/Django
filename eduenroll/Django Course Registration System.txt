@@ -1,0 +1,1404 @@
+# Django Course Registration System - Complete Project
+
+## Project Structure:
+```
+eduenroll/
+├── eduenroll/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── asgi.py
+├── courses/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── views.py
+│   ├── forms.py
+│   ├── urls.py
+│   ├── migrations/
+│   │   └── __init__.py
+│   ├── templates/
+│   │   └── courses/
+│   │       ├── base.html
+│   │       ├── home.html
+│   │       ├── about.html
+│   │       └── register.html
+│   └── static/
+│       └── courses/
+│           └── style.css
+├── manage.py
+└── requirements.txt
+```
+
+## 1. Project Setup Commands:
+```bash
+# Create project
+django-admin startproject eduenroll
+cd eduenroll
+
+# Create app
+python manage.py startapp courses
+
+# After setting up all files:
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+## 2. requirements.txt
+```
+Django==4.2.7
+```
+
+## 3. eduenroll/settings.py
+```python
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+SECRET_KEY = 'your-secret-key-here-change-in-production'
+
+DEBUG = True
+
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'courses',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'eduenroll.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'eduenroll.wsgi.application'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+```
+
+## 4. eduenroll/urls.py
+```python
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('courses.urls')),
+]
+```
+
+## 5. courses/models.py
+```python
+from django.db import models
+from django.core.validators import EmailValidator
+
+class Course(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    duration = models.CharField(max_length=50)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    instructor = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        ordering = ['name']
+
+class Registration(models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField(validators=[EmailValidator()])
+    phone = models.CharField(max_length=15)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    message = models.TextField(blank=True, null=True)
+    registration_date = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.course.name}"
+    
+    class Meta:
+        ordering = ['-registration_date']
+        unique_together = ['email', 'course']
+```
+
+## 6. courses/forms.py
+```python
+from django import forms
+from .models import Registration, Course
+
+class RegistrationForm(forms.ModelForm):
+    class Meta:
+        model = Registration
+        fields = ['name', 'email', 'phone', 'course', 'message']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your full name'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your email address'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your phone number'
+            }),
+            'course': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'message': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Any additional message (optional)'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['course'].queryset = Course.objects.all()
+        self.fields['course'].empty_label = "Select a course"
+```
+
+## 7. courses/views.py
+```python
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.core.paginator import Paginator
+from .models import Course, Registration
+from .forms import RegistrationForm
+
+def home(request):
+    courses = Course.objects.all()[:6]  # Show latest 6 courses
+    total_registrations = Registration.objects.count()
+    total_courses = Course.objects.count()
+    
+    context = {
+        'courses': courses,
+        'total_registrations': total_registrations,
+        'total_courses': total_courses,
+    }
+    return render(request, 'courses/home.html', context)
+
+def about(request):
+    return render(request, 'courses/about.html')
+
+def register(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, 'Registration submitted successfully!')
+                return redirect('register')
+            except Exception as e:
+                messages.error(request, 'Registration failed. You may have already registered for this course.')
+    else:
+        form = RegistrationForm()
+    
+    # Get all registrations for display
+    registrations = Registration.objects.all()
+    
+    # Pagination
+    paginator = Paginator(registrations, 10)  # Show 10 registrations per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'form': form,
+        'registrations': page_obj,
+    }
+    return render(request, 'courses/register.html', context)
+
+def courses_list(request):
+    courses = Course.objects.all()
+    context = {
+        'courses': courses,
+    }
+    return render(request, 'courses/courses_list.html', context)
+```
+
+## 8. courses/urls.py
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('about/', views.about, name='about'),
+    path('register/', views.register, name='register'),
+    path('courses/', views.courses_list, name='courses_list'),
+]
+```
+
+## 9. courses/admin.py
+```python
+from django.contrib import admin
+from .models import Course, Registration
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ['name', 'instructor', 'duration', 'price', 'created_at']
+    list_filter = ['instructor', 'created_at']
+    search_fields = ['name', 'instructor']
+    ordering = ['-created_at']
+
+@admin.register(Registration)
+class RegistrationAdmin(admin.ModelAdmin):
+    list_display = ['name', 'email', 'course', 'registration_date']
+    list_filter = ['course', 'registration_date']
+    search_fields = ['name', 'email', 'course__name']
+    ordering = ['-registration_date']
+    readonly_fields = ['registration_date']
+```
+
+## 10. courses/templates/courses/base.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EduEnroll - Course Registration{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'courses/style.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1><a href="{% url 'home' %}">EduEnroll</a></h1>
+                <ul class="nav-menu">
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="{% url 'about' %}">About</a></li>
+                    <li><a href="{% url 'register' %}">Register</a></li>
+                    <li><a href="{% url 'courses_list' %}">Courses</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 EduEnroll. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Auto-hide messages after 5 seconds
+        setTimeout(function() {
+            $('.alert').fadeOut('slow');
+        }, 5000);
+    </script>
+</body>
+</html>
+```
+
+## 11. courses/templates/courses/home.html
+```html
+{% extends 'courses/base.html' %}
+
+{% block title %}Home - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1>Welcome to EduEnroll</h1>
+        <p>Your gateway to quality education and professional development</p>
+        <a href="{% url 'register' %}" class="btn btn-primary">Register Now</a>
+    </div>
+</section>
+
+<section class="stats">
+    <div class="stats-container">
+        <div class="stat-item">
+            <h3>{{ total_courses }}</h3>
+            <p>Available Courses</p>
+        </div>
+        <div class="stat-item">
+            <h3>{{ total_registrations }}</h3>
+            <p>Students Registered</p>
+        </div>
+        <div class="stat-item">
+            <h3>50+</h3>
+            <p>Expert Instructors</p>
+        </div>
+    </div>
+</section>
+
+<section class="featured-courses">
+    <h2>Featured Courses</h2>
+    <div class="courses-grid">
+        {% for course in courses %}
+        <div class="course-card">
+            <h3>{{ course.name }}</h3>
+            <p>{{ course.description|truncatewords:15 }}</p>
+            <div class="course-meta">
+                <span class="duration">{{ course.duration }}</span>
+                <span class="price">${{ course.price }}</span>
+            </div>
+            <p class="instructor">Instructor: {{ course.instructor }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="text-center">
+        <a href="{% url 'courses_list' %}" class="btn btn-secondary">View All Courses</a>
+    </div>
+</section>
+{% endblock %}
+```
+
+## 12. courses/templates/courses/about.html
+```html
+{% extends 'courses/base.html' %}
+
+{% block title %}About - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="about">
+    <div class="container">
+        <h1>About EduEnroll</h1>
+        <div class="about-content">
+            <div class="about-text">
+                <p>EduEnroll is a premier online learning platform dedicated to providing high-quality education and professional development opportunities. Our mission is to make learning accessible, engaging, and effective for students worldwide.</p>
+                
+                <h3>Our Vision</h3>
+                <p>To become the leading platform for online education, empowering learners to achieve their goals and advance their careers through innovative and comprehensive courses.</p>
+                
+                <h3>Why Choose EduEnroll?</h3>
+                <ul>
+                    <li>Expert instructors with industry experience</li>
+                    <li>Flexible learning schedules</li>
+                    <li>Interactive and engaging content</li>
+                    <li>Certificates upon completion</li>
+                    <li>Affordable pricing</li>
+                    <li>24/7 student support</li>
+                </ul>
+                
+                <h3>Our Commitment</h3>
+                <p>We are committed to providing excellent educational experiences that help our students succeed in their personal and professional lives. Our courses are designed by industry experts and updated regularly to ensure relevance and quality.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+```
+
+## 13. courses/templates/courses/register.html
+```html
+{% extends 'courses/base.html' %}
+
+{% block title %}Register - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="register">
+    <div class="container">
+        <h1>Register for a Course</h1>
+        
+        <div class="register-form">
+            <form method="post" id="registration-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">Full Name:</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div class="error">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">Email:</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="error">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}">Phone:</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                        <div class="error">{{ form.phone.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.course.id_for_label }}">Course:</label>
+                    {{ form.course }}
+                    {% if form.course.errors %}
+                        <div class="error">{{ form.course.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.message.id_for_label }}">Message:</label>
+                    {{ form.message }}
+                    {% if form.message.errors %}
+                        <div class="error">{{ form.message.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Submit Registration</button>
+            </form>
+        </div>
+        
+        <div class="registered-students">
+            <h3>Recent Registrations</h3>
+            {% if registrations %}
+                <div class="students-list">
+                    {% for reg in registrations %}
+                        <div class="student-item">
+                            <h4>{{ reg.name }}</h4>
+                            <p>{{ reg.email }}</p>
+                            <p><strong>Course:</strong> {{ reg.course.name }}</p>
+                            <p><small>Registered on: {{ reg.registration_date|date:"M d, Y" }}</small></p>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if registrations.has_other_pages %}
+                    <div class="pagination">
+                        {% if registrations.has_previous %}
+                            <a href="?page={{ registrations.previous_page_number }}">&laquo; Previous</a>
+                        {% endif %}
+                        
+                        {% for num in registrations.paginator.page_range %}
+                            {% if registrations.number == num %}
+                                <strong>{{ num }}</strong>
+                            {% elif num > registrations.number|add:'-3' and num < registrations.number|add:'3' %}
+                                <a href="?page={{ num }}">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if registrations.has_next %}
+                            <a href="?page={{ registrations.next_page_number }}">Next &raquo;</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p>No registrations yet. Be the first to register!</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+$(document).ready(function() {
+    $("#registration-form").submit(function(e) {
+        // Basic form validation
+        let isValid = true;
+        let name = $("input[name='name']").val().trim();
+        let email = $("input[name='email']").val().trim();
+        let phone = $("input[name='phone']").val().trim();
+        let course = $("select[name='course']").val();
+        
+        if (!name || !email || !phone || !course) {
+            alert("Please fill in all required fields.");
+            isValid = false;
+        }
+        
+        if (isValid) {
+            // Show loading state
+            $(this).find('button[type="submit"]').prop('disabled', true).text('Submitting...');
+        }
+        
+        return isValid;
+    });
+});
+</script>
+{% endblock %}
+```
+
+## 14. courses/templates/courses/courses_list.html
+```html
+{% extends 'courses/base.html' %}
+
+{% block title %}Courses - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="courses-list">
+    <div class="container">
+        <h1>Our Courses</h1>
+        
+        <div class="courses-grid">
+            {% for course in courses %}
+            <div class="course-card">
+                <h3>{{ course.name }}</h3>
+                <p>{{ course.description }}</p>
+                <div class="course-meta">
+                    <span class="duration">{{ course.duration }}</span>
+                    <span class="price">${{ course.price }}</span>
+                </div>
+                <p class="instructor">Instructor: {{ course.instructor }}</p>
+                <a href="{% url 'register' %}" class="btn btn-primary">Register Now</a>
+            </div>
+            {% empty %}
+            <p>No courses available at the moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+```
+
+## 15. courses/static/courses/style.css
+```css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f4f4f4;
+}
+
+/* Header Styles */
+.navbar {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1rem 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+}
+
+.navbar h1 a {
+    color: white;
+    text-decoration: none;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
+
+.nav-menu a {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.nav-menu a:hover {
+    background-color: rgba(255,255,255,0.2);
+}
+
+/* Main Content */
+main {
+    min-height: calc(100vh - 140px);
+    padding: 2rem 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4rem 0;
+    text-align: center;
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: #28a745;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #218838;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+/* Stats Section */
+.stats {
+    background: white;
+    padding: 3rem 0;
+    margin: 2rem 0;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item h3 {
+    font-size: 2.5rem;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+/* Courses Grid */
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.course-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+}
+
+.course-card h3 {
+    color: #667eea;
+    margin-bottom: 1rem;
+}
+
+.course-meta {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem 0;
+    font-weight: bold;
+}
+
+.price {
+    color: #28a745;
+}
+
+.instructor {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Form Styles */
+.register-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+/* Messages */
+.messages {
+    margin: 1rem 0;
+}
+
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Registered Students */
+.registered-students {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.students-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.student-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+    border-left: 4px solid #667eea;
+}
+
+.student-item h4 {
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.pagination a,
+.pagination strong {
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #667eea;
+    border: 1px solid #ddd;
+}
+
+.pagination a:hover {
+    background: #667eea;
+    color: white;
+}
+
+.pagination strong {
+    background: #667eea;
+    color: white;
+}
+
+/* About Page */
+.about {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.about-content h3 {
+    color: #667eea;
+    margin: 2rem 0 1rem 0;
+}
+
+.about-content ul {
+    margin-left: 2rem;
+}
+
+.about-content ul li {
+    margin-bottom: 0.5rem;
+}
+
+/* Footer */
+footer {
+    background: #333;
+    color: white;
+    text-align: center;
+    padding: 2rem 0;
+    margin-top: 2rem;
+}
+
+/* Utility Classes */
+.text-center {
+    text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .nav-menu {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+    
+    .courses-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr;
+    }
+}
+```
+
+## 16. Management Commands to Run:
+
+```bash
+# 1. Create the project structure
+mkdir eduenroll
+cd eduenroll
+
+# 2. Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 3. Install Django
+pip install Django==4.2.7
+
+# 4. Create project and app
+django-admin startproject eduenroll .
+python manage.py startapp courses
+
+# 5. After adding all the code files:
+python manage.py makemigrations
+python manage.py migrate
+
+# 6. Create superuser
+python manage.py createsuperuser
+
+# 7. Create some sample data in Django admin or shell
+python manage.py shell
+```
+
+## 17. Sample Data (Run in Django shell):
+```python
+from courses.models import Course
+
+# Create sample courses
+Course.objects.create(
+    name="Python Programming",
+    description="Learn Python from basics to advanced level with hands-on projects",
+    duration="8 weeks",
+    price=299.99,
+    instructor="John Smith"
+)
+
+Course.objects.create(
+    name="Web Development with Django",
+    description="Build modern web applications using Django framework",
+    duration="10 weeks",
+    price=399.99,
+    instructor="Sarah Johnson"
+)
+
+Course.objects.create(
+    name="Data Science Fundamentals",
+    description="Introduction to data science with Python, pandas, and machine learning",
+    duration="12 weeks",
+    price=499.99,
+    instructor="Dr. Michael Chen"
+)
+
+Course.objects.create(
+    name="JavaScript & React",
+    description="Modern frontend development with JavaScript and React",
+    duration="6 weeks",
+    price=349.99,
+    instructor="Emily Davis"
+)
+
+Course.objects.create(
+    name="Database Design & SQL",
+    description="Learn database design principles and SQL query optimization",
+    duration="4 weeks",
+    price=199.99,
+    instructor="Robert Wilson"
+)
+
+Course.objects.create(
+    name="Machine Learning with Python",
+    description="Advanced machine learning algorithms and implementations",
+    duration="14 weeks",
+    price=599.99,
+    instructor="Dr. Lisa Anderson"
+)
+```
+
+## 18. Additional Features You Can Add:
+
+### A. Email Notifications (courses/utils.py):
+```python
+from django.core.mail import send_mail
+from django.conf import settings
+
+def send_registration_email(registration):
+    subject = f'Registration Confirmation - {registration.course.name}'
+    message = f'''
+    Dear {registration.name},
+    
+    Thank you for registering for {registration.course.name}!
+    
+    Course Details:
+    - Course: {registration.course.name}
+    - Instructor: {registration.course.instructor}
+    - Duration: {registration.course.duration}
+    - Price: ${registration.course.price}
+    
+    We will contact you soon with further details.
+    
+    Best regards,
+    EduEnroll Team
+    '''
+    
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [registration.email],
+        fail_silently=False,
+    )
+```
+
+### B. Search Functionality (Update views.py):
+```python
+from django.db.models import Q
+
+def courses_list(request):
+    query = request.GET.get('q')
+    courses = Course.objects.all()
+    
+    if query:
+        courses = courses.filter(
+            Q(name__icontains=query) | 
+            Q(description__icontains=query) |
+            Q(instructor__icontains=query)
+        )
+    
+    context = {
+        'courses': courses,
+        'query': query,
+    }
+    return render(request, 'courses/courses_list.html', context)
+```
+
+### C. Course Categories (Update models.py):
+```python
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name_plural = "Categories"
+
+# Add to Course model:
+class Course(models.Model):
+    # ... existing fields ...
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True, blank=True)
+    # ... rest of the fields ...
+```
+
+### D. User Authentication (Update views.py):
+```python
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.forms import UserCreationForm
+
+@login_required
+def register(request):
+    # ... existing register view code ...
+
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'Account created for {username}!')
+            return redirect('login')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/signup.html', {'form': form})
+```
+
+### E. Course Reviews (Additional model):
+```python
+class Review(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reviews')
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f'{self.name} - {self.course.name} ({self.rating}/5)'
+```
+
+## 19. Production Settings (settings_prod.py):
+```python
+from .settings import *
+import os
+
+DEBUG = False
+
+ALLOWED_HOSTS = ['your-domain.com', 'www.your-domain.com']
+
+# Database for production
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_USER')
+
+# Security settings
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+```
+
+## 20. Environment Variables (.env file):
+```env
+SECRET_KEY=your-secret-key-here
+DEBUG=False
+DB_NAME=eduenroll_db
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_HOST=localhost
+DB_PORT=5432
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+```
+
+## 21. Deployment Commands:
+```bash
+# Collect static files
+python manage.py collectstatic
+
+# Run with production settings
+python manage.py runserver --settings=eduenroll.settings_prod
+
+# For production deployment (using gunicorn)
+pip install gunicorn
+gunicorn eduenroll.wsgi:application --bind 0.0.0.0:8000
+```
+
+## 22. Testing (courses/tests.py):
+```python
+from django.test import TestCase, Client
+from django.urls import reverse
+from .models import Course, Registration
+
+class CourseModelTest(TestCase):
+    def setUp(self):
+        self.course = Course.objects.create(
+            name="Test Course",
+            description="Test Description",
+            duration="4 weeks",
+            price=99.99,
+            instructor="Test Instructor"
+        )
+    
+    def test_course_creation(self):
+        self.assertEqual(self.course.name, "Test Course")
+        self.assertEqual(str(self.course), "Test Course")
+
+class RegistrationTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.course = Course.objects.create(
+            name="Test Course",
+            description="Test Description",
+            duration="4 weeks",
+            price=99.99,
+            instructor="Test Instructor"
+        )
+    
+    def test_registration_form(self):
+        response = self.client.post(reverse('register'), {
+            'name': 'John Doe',
+            'email': 'john@example.com',
+            'phone': '1234567890',
+            'course': self.course.id,
+            'message': 'Test message'
+        })
+        self.assertEqual(response.status_code, 302)  # Redirect after successful registration
+        self.assertTrue(Registration.objects.filter(email='john@example.com').exists())
+
+# Run tests with:
+# python manage.py test
+```
+
+## 23. API Endpoints (Optional - courses/api.py):
+```python
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+import json
+from .models import Course, Registration
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CourseAPIView(View):
+    def get(self, request):
+        courses = Course.objects.all()
+        data = [{
+            'id': course.id,
+            'name': course.name,
+            'description': course.description,
+            'duration': course.duration,
+            'price': float(course.price),
+            'instructor': course.instructor,
+        } for course in courses]
+        return JsonResponse({'courses': data})
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RegistrationAPIView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            course = Course.objects.get(id=data['course_id'])
+            registration = Registration.objects.create(
+                name=data['name'],
+                email=data['email'],
+                phone=data['phone'],
+                course=course,
+                message=data.get('message', '')
+            )
+            return JsonResponse({
+                'success': True,
+                'message': 'Registration successful',
+                'registration_id': registration.id
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
+```
+
+## 24. Final Project Structure:
+```
+eduenroll/
+├── manage.py
+├── requirements.txt
+├── .env
+├── db.sqlite3
+├── eduenroll/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── settings_prod.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── asgi.py
+├── courses/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── views.py
+│   ├── forms.py
+│   ├── urls.py
+│   ├── utils.py
+│   ├── api.py
+│   ├── tests.py
+│   ├── migrations/
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   └── ...
+│   ├── templates/
+│   │   └── courses/
+│   │       ├── base.html
+│   │       ├── home.html
+│   │       ├── about.html
+│   │       ├── register.html
+│   │       └── courses_list.html
+│   └── static/
+│       └── courses/
+│           └── style.css
+└── static/
+    └── (collected static files)
+```
+
+This complete Django project includes:
+- ✅ Course and Registration models
+- ✅ Admin interface
+- ✅ Forms with validation
+- ✅ Multiple views and templates
+- ✅ Responsive CSS design
+- ✅ Pagination
+- ✅ Message system
+- ✅ Search functionality
+- ✅ Production settings
+- ✅ Testing framework
+- ✅ Optional API endpoints
+- ✅ Email notifications
+- ✅ Error handling
+
+To run the project:
+1. Follow the setup commands in section 16
+2. Add the sample data from section 17
+3. Run `python manage.py runserver`
+4. Visit `http://127.0.0.1:8000/`

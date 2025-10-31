@@ -1,0 +1,1 @@
+console.log('EduEnroll JS Loaded');

@@ -1,0 +1,50 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}Home - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1>Welcome to EduEnroll</h1>
+        <p>Your gateway to quality education and professional development</p>
+        <a href="{% url 'register' %}" class="btn btn-primary">Register Now</a>
+    </div>
+</section>
+
+<section class="stats">
+    <div class="stats-container">
+        <div class="stat-item">
+            <h3>{{ total_courses }}</h3>
+            <p>Available Courses</p>
+        </div>
+        <div class="stat-item">
+            <h3>{{ total_registrations }}</h3>
+            <p>Students Registered</p>
+        </div>
+        <div class="stat-item">
+            <h3>50+</h3>
+            <p>Expert Instructors</p>
+        </div>
+    </div>
+</section>
+
+<section class="featured-courses">
+    <h2>Featured Courses</h2>
+    <div class="courses-grid">
+        {% for course in courses %}
+        <div class="course-card">
+            <h3>{{ course.name }}</h3>
+            <p>{{ course.description|truncatewords:15 }}</p>
+            <div class="course-meta">
+                <span class="duration">{{ course.duration }}</span>
+                <span class="price">${{ course.price }}</span>
+            </div>
+            <p class="instructor">Instructor: {{ course.instructor }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="text-center">
+        <a href="{% url 'courses_list' %}" class="btn btn-secondary">View All Courses</a>
+    </div>
+</section>
+{% endblock %}

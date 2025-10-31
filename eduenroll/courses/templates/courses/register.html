@@ -1,0 +1,122 @@
+{% extends 'courses/base.html' %}
+
+{% block title %}Register - EduEnroll{% endblock %}
+
+{% block content %}
+<section class="register">
+    <div class="container">
+        <h1>Register for a Course</h1>
+        
+        <div class="register-form">
+            <form method="post" id="registration-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">Full Name:</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div class="error">{{ form.name.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">Email:</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="error">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.phone.id_for_label }}">Phone:</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                        <div class="error">{{ form.phone.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.course.id_for_label }}">Course:</label>
+                    {{ form.course }}
+                    {% if form.course.errors %}
+                        <div class="error">{{ form.course.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.message.id_for_label }}">Message:</label>
+                    {{ form.message }}
+                    {% if form.message.errors %}
+                        <div class="error">{{ form.message.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Submit Registration</button>
+            </form>
+        </div>
+        
+        <div class="registered-students">
+            <h3>Recent Registrations</h3>
+            {% if registrations %}
+                <div class="students-list">
+                    {% for reg in registrations %}
+                        <div class="student-item">
+                            <h4>{{ reg.name }}</h4>
+                            <p>{{ reg.email }}</p>
+                            <p><strong>Course:</strong> {{ reg.course.name }}</p>
+                            <p><small>Registered on: {{ reg.registration_date|date:"M d, Y" }}</small></p>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if registrations.has_other_pages %}
+                    <div class="pagination">
+                        {% if registrations.has_previous %}
+                            <a href="?page={{ registrations.previous_page_number }}">&laquo; Previous</a>
+                        {% endif %}
+                        
+                        {% for num in registrations.paginator.page_range %}
+                            {% if registrations.number == num %}
+                                <strong>{{ num }}</strong>
+                            {% elif num > registrations.number|add:'-3' and num < registrations.number|add:'3' %}
+                                <a href="?page={{ num }}">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if registrations.has_next %}
+                            <a href="?page={{ registrations.next_page_number }}">Next &raquo;</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p>No registrations yet. Be the first to register!</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<script>
+$(document).ready(function() {
+    $("#registration-form").submit(function(e) {
+        // Basic form validation
+        let isValid = true;
+        let name = $("input[name='name']").val().trim();
+        let email = $("input[name='email']").val().trim();
+        let phone = $("input[name='phone']").val().trim();
+        let course = $("select[name='course']").val();
+        
+        if (!name || !email || !phone || !course) {
+            alert("Please fill in all required fields.");
+            isValid = false;
+        }
+        
+        if (isValid) {
+            // Show loading state
+            $(this).find('button[type="submit"]').prop('disabled', true).text('Submitting...');
+        }
+        
+        return isValid;
+    });
+});
+</script>
+{% endblock %}
